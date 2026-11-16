@@ -7,6 +7,22 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// Inyectar Neon DB
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Configurar CORS para tu Angular PWA
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowPWA", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200", "https://tu-dominio-angular.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -21,5 +37,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors("AllowPWA");
 
 app.Run();

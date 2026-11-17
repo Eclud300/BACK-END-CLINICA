@@ -26,22 +26,35 @@ namespace Clinica.Controllers
             var notas = await _context.NotasMedicas
                 .Include(n => n.Paciente)
                 .Include(n => n.Doctor)
+                .OrderByDescending(n => n.FechaRegistro)
                 .Select(n => new NotaMedicaRespuestaDTO
                 {
                     Id = n.Id,
+                    PacienteId = n.PacienteId,
+                    CitaId = n.CitaId,
+                    DoctorId = n.DoctorId,
                     NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
                     NombreDoctor = n.Doctor!.Nombre,
                     MotivoConsulta = n.MotivoConsulta,
+                    FrecuenciaCardiaca = n.FrecuenciaCardiaca,
+                    FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
+                    Temperatura = n.Temperatura,
+                    SaturacionOxigeno = n.SaturacionOxigeno,
+                    Peso = n.Peso,
+                    Talla = n.Talla,
+                    IMC = n.IMC,
+                    ExploracionFisica = n.ExploracionFisica,
                     Diagnostico = n.Diagnostico,
                     CodigoCIE10 = n.CodigoCIE10,
                     PlanTerapeutico = n.PlanTerapeutico,
+                    RecetaMedicamentos = n.RecetaMedicamentos,
+                    EstudiosAuxiliares = n.EstudiosAuxiliares,
                     FechaRegistro = n.FechaRegistro
                 })
                 .ToListAsync();
 
             return Ok(notas);
         }
-
         // 2. GET: api/NotasMedicas/5
         [HttpGet("{id}")]
         public async Task<ActionResult<NotaMedicaRespuestaDTO>> GetNotaMedica(int id)
@@ -53,12 +66,25 @@ namespace Clinica.Controllers
                 .Select(n => new NotaMedicaRespuestaDTO
                 {
                     Id = n.Id,
+                    PacienteId = n.PacienteId,
+                    CitaId = n.CitaId,
+                    DoctorId = n.DoctorId,
                     NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
                     NombreDoctor = n.Doctor!.Nombre,
                     MotivoConsulta = n.MotivoConsulta,
+                    FrecuenciaCardiaca = n.FrecuenciaCardiaca,
+                    FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
+                    Temperatura = n.Temperatura,
+                    SaturacionOxigeno = n.SaturacionOxigeno,
+                    Peso = n.Peso,
+                    Talla = n.Talla,
+                    IMC = n.IMC,
+                    ExploracionFisica = n.ExploracionFisica,
                     Diagnostico = n.Diagnostico,
                     CodigoCIE10 = n.CodigoCIE10,
                     PlanTerapeutico = n.PlanTerapeutico,
+                    RecetaMedicamentos = n.RecetaMedicamentos,
+                    EstudiosAuxiliares = n.EstudiosAuxiliares,
                     FechaRegistro = n.FechaRegistro
                 })
                 .FirstOrDefaultAsync();

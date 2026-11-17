@@ -1,16 +1,25 @@
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Clinica.Models
 {
     public class Cita
     {
-        [Key]
+        [Column("id")]
         public int Id { get; set; }
-        public string Folio { get; set; }
-        public int PacienteId { get; set; }
+        
+        [Column("clinicaid")]
         public int ClinicaId { get; set; }
+        
+        [Column("pacienteid")]
+        public int PacienteId { get; set; }
+        
+        [Column("folio")]
+        public string Folio { get; set; } = string.Empty;
+        
+        [Column("fechahora")]
         public DateTime FechaHora { get; set; }
-        public string Estado { get; set; } // Pendiente, Confirmada, Cancelada
+        
+        [Column("estado")]
+        public string Estado { get; set; } = string.Empty;
     }
 }

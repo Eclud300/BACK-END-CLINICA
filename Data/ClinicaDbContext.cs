@@ -13,5 +13,7 @@ namespace Clinica.Data
         public DbSet<Paciente> Pacientes { get; set; }
         public DbSet<Cita> Citas { get; set; }
         public DbSet<NotaMedica> NotasMedicas { get; set; }
+        public DbSet<Insumo> Insumos { get; set; }
+
     }
 }

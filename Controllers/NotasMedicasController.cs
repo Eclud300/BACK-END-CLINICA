@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Clinica.Data;
 using Clinica.Models;
 using Microsoft.AspNetCore.Authorization;
+using Clinica.DTOs;
 
 namespace Clinica.Controllers
 {
@@ -20,18 +21,50 @@ namespace Clinica.Controllers
 
         // 1. GET: api/NotasMedicas
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<NotaMedica>>> GetNotasMedicas()
+        public async Task<ActionResult<IEnumerable<NotaMedicaRespuestaDTO>>> GetNotasMedicas()
         {
-            return await _context.NotasMedicas.ToListAsync();
+            var notas = await _context.NotasMedicas
+                .Include(n => n.Paciente)
+                .Include(n => n.Doctor)
+                .Select(n => new NotaMedicaRespuestaDTO
+                {
+                    Id = n.Id,
+                    NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
+                    NombreDoctor = n.Doctor!.Nombre,
+                    MotivoConsulta = n.MotivoConsulta,
+                    Diagnostico = n.Diagnostico,
+                    CodigoCIE10 = n.CodigoCIE10,
+                    PlanTerapeutico = n.PlanTerapeutico,
+                    FechaRegistro = n.FechaRegistro
+                })
+                .ToListAsync();
+
+            return Ok(notas);
         }
 
         // 2. GET: api/NotasMedicas/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<NotaMedica>> GetNotaMedica(int id)
+        public async Task<ActionResult<NotaMedicaRespuestaDTO>> GetNotaMedica(int id)
         {
-            var nota = await _context.NotasMedicas.FindAsync(id);
+            var nota = await _context.NotasMedicas
+                .Include(n => n.Paciente)
+                .Include(n => n.Doctor)
+                .Where(n => n.Id == id)
+                .Select(n => new NotaMedicaRespuestaDTO
+                {
+                    Id = n.Id,
+                    NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
+                    NombreDoctor = n.Doctor!.Nombre,
+                    MotivoConsulta = n.MotivoConsulta,
+                    Diagnostico = n.Diagnostico,
+                    CodigoCIE10 = n.CodigoCIE10,
+                    PlanTerapeutico = n.PlanTerapeutico,
+                    FechaRegistro = n.FechaRegistro
+                })
+                .FirstOrDefaultAsync();
+
             if (nota == null) return NotFound("Nota médica no encontrada.");
-            return nota;
+            return Ok(nota);
         }
 
         // 3. POST: api/NotasMedicas (El médico guarda la consulta y se autocompleta la cita)

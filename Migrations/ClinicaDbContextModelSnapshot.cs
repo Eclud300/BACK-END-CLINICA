@@ -60,6 +60,37 @@ namespace Clinica.Migrations
                     b.ToTable("Citas");
                 });
 
+            modelBuilder.Entity("Clinica.Models.Insumo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FechaCaducidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("UnidadMedida")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Insumos");
+                });
+
             modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
                 {
                     b.Property<int>("Id")

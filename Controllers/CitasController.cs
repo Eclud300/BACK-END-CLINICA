@@ -2,13 +2,14 @@
 using Microsoft.EntityFrameworkCore;
 using Clinica.Data;
 using Clinica.Models;
+using Clinica.DTOs;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Clinica.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // 🔒 Protección JWT activada
+    [Authorize]
     public class CitasController : ControllerBase
     {
         private readonly ClinicaDbContext _context;
@@ -18,21 +19,58 @@ namespace Clinica.Controllers
             _context = context;
         }
 
-        // 1. GET: api/Citas (Obtener todas las citas de la clínica)
+        // 1. GET: api/Citas (Devuelve el DTO limpio y aplanado)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cita>>> GetCitas()
+        public async Task<ActionResult<IEnumerable<CitaRespuestaDTO>>> GetCitas()
         {
-            // Más adelante podemos usar .Include() para traer los nombres del doctor y paciente
-            return await _context.Citas.ToListAsync();
+            var citas = await _context.Citas
+                .Include(c => c.Paciente)
+                .Include(c => c.Doctor)
+                .Select(c => new CitaRespuestaDTO
+                {
+                    Id = c.Id,
+                    PacienteId = c.PacienteId,
+                    NombrePaciente = c.Paciente!.Nombre + " " + c.Paciente.Apellidos,
+                    CurpPaciente = c.Paciente.CURP,
+                    DoctorId = c.DoctorId,
+                    NombreDoctor = c.Doctor!.Nombre,
+                    RolDoctor = c.Doctor.Rol,
+                    FechaHora = c.FechaHora,
+                    MotivoConsulta = c.MotivoConsulta,
+                    Estado = c.Estado,
+                    NotasRecepcion = c.NotasRecepcion
+                })
+                .ToListAsync();
+
+            return Ok(citas);
         }
 
-        // 2. GET: api/Citas/5 (Buscar una cita por ID)
+        // 2. GET: api/Citas/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cita>> GetCita(int id)
+        public async Task<ActionResult<CitaRespuestaDTO>> GetCita(int id)
         {
-            var cita = await _context.Citas.FindAsync(id);
+            var cita = await _context.Citas
+                .Include(c => c.Paciente)
+                .Include(c => c.Doctor)
+                .Where(c => c.Id == id)
+                .Select(c => new CitaRespuestaDTO
+                {
+                    Id = c.Id,
+                    PacienteId = c.PacienteId,
+                    NombrePaciente = c.Paciente!.Nombre + " " + c.Paciente.Apellidos,
+                    CurpPaciente = c.Paciente.CURP,
+                    DoctorId = c.DoctorId,
+                    NombreDoctor = c.Doctor!.Nombre,
+                    RolDoctor = c.Doctor.Rol,
+                    FechaHora = c.FechaHora,
+                    MotivoConsulta = c.MotivoConsulta,
+                    Estado = c.Estado,
+                    NotasRecepcion = c.NotasRecepcion
+                })
+                .FirstOrDefaultAsync();
+
             if (cita == null) return NotFound("Cita no encontrada.");
-            return cita;
+            return Ok(cita);
         }
 
         // 3. POST: api/Citas (Agendar una nueva cita)

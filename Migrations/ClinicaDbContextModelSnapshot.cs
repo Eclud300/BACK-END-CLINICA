@@ -41,6 +41,10 @@ namespace Clinica.Migrations
                     b.Property<DateTime>("FechaHora")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Folio")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("MotivoConsulta")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -55,9 +59,41 @@ namespace Clinica.Migrations
 
                     b.HasIndex("DoctorId");
 
+                    b.HasIndex("Folio")
+                        .IsUnique();
+
                     b.HasIndex("PacienteId");
 
                     b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.ClinicaInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Logo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Clinicas");
                 });
 
             modelBuilder.Entity("Clinica.Models.Insumo", b =>
@@ -70,6 +106,13 @@ namespace Clinica.Migrations
 
                     b.Property<int>("Cantidad")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Óptimo");
 
                     b.Property<DateTime?>("FechaCaducidad")
                         .HasColumnType("timestamp with time zone");
@@ -162,7 +205,8 @@ namespace Clinica.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CitaId");
+                    b.HasIndex("CitaId")
+                        .IsUnique();
 
                     b.HasIndex("DoctorId");
 
@@ -234,6 +278,9 @@ namespace Clinica.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CURP")
+                        .IsUnique();
+
                     b.ToTable("Pacientes");
                 });
 
@@ -260,6 +307,13 @@ namespace Clinica.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Activo");
 
                     b.Property<string>("Estudios")
                         .HasColumnType("text");
@@ -318,6 +372,9 @@ namespace Clinica.Migrations
                         .HasColumnType("character varying(150)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Correo")
+                        .IsUnique();
 
                     b.ToTable("Usuarios");
                 });

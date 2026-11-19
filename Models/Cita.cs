@@ -9,6 +9,9 @@ namespace Clinica.Models
         [Key]
         public int Id { get; set; }
 
+        [MaxLength(50)]
+        public string? Folio { get; set; }
+
         // Relación con el Paciente
         [Required]
         public int PacienteId { get; set; }
@@ -28,7 +31,7 @@ namespace Clinica.Models
         public string? MotivoConsulta { get; set; }
 
         [MaxLength(20)]
-        public string Estado { get; set; } = "Agendada"; // Ej: Agendada, En Espera, Completada, Cancelada
+        public string Estado { get; set; } = "Agendada"; // Agendada, En Espera, Completada, Cancelada
 
         public string? NotasRecepcion { get; set; }
     }

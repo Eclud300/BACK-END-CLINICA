@@ -25,6 +25,10 @@ namespace Clinica.Models
         [MaxLength(20)]
         public string Rol { get; set; } = null!;
 
+        [Required]
+        [MaxLength(20)]
+        public string Estado { get; set; } = "Activo"; // Activo, Suspendido
+
         // Datos personales y de contacto (Opcionales)
         [MaxLength(20)]
         public string? Telefono { get; set; }

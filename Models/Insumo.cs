@@ -19,6 +19,9 @@ namespace Clinica.Models
         [MaxLength(50)]
         public string? UnidadMedida { get; set; } // Ej: Cajas, Piezas, Frascos
 
+        [MaxLength(30)]
+        public string Estado { get; set; } = "Óptimo"; // Ej: Óptimo, Bajo, Agotado
+
         public DateTime? FechaCaducidad { get; set; }
 
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;

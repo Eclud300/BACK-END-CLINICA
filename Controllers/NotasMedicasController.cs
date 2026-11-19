@@ -4,124 +4,126 @@ using Clinica.Data;
 using Clinica.Models;
 using Microsoft.AspNetCore.Authorization;
 using Clinica.DTOs;
+using System.Linq.Expressions;
 
 namespace Clinica.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // 🔒 Bóveda de seguridad activa con JWT
+    [Authorize]
     public class NotasMedicasController : ControllerBase
     {
         private readonly ClinicaDbContext _context;
+
+        private static Expression<Func<NotaMedica, NotaMedicaRespuestaDTO>> ProyeccionDto() => n => new NotaMedicaRespuestaDTO
+        {
+            Id = n.Id,
+            PacienteId = n.PacienteId,
+            CitaId = n.CitaId,
+            DoctorId = n.DoctorId,
+            NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
+            NombreDoctor = n.Doctor!.Nombre,
+            MotivoConsulta = n.MotivoConsulta,
+            FrecuenciaCardiaca = n.FrecuenciaCardiaca,
+            FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
+            Temperatura = n.Temperatura,
+            SaturacionOxigeno = n.SaturacionOxigeno,
+            Peso = n.Peso,
+            Talla = n.Talla,
+            IMC = n.IMC,
+            ExploracionFisica = n.ExploracionFisica,
+            Diagnostico = n.Diagnostico,
+            CodigoCIE10 = n.CodigoCIE10,
+            PlanTerapeutico = n.PlanTerapeutico,
+            RecetaMedicamentos = n.RecetaMedicamentos,
+            EstudiosAuxiliares = n.EstudiosAuxiliares,
+            FechaRegistro = n.FechaRegistro
+        };
 
         public NotasMedicasController(ClinicaDbContext context)
         {
             _context = context;
         }
 
-        // 1. GET: api/NotasMedicas
+        // GET: api/NotasMedicas
         [HttpGet]
         public async Task<ActionResult<IEnumerable<NotaMedicaRespuestaDTO>>> GetNotasMedicas()
         {
             var notas = await _context.NotasMedicas
-                .Include(n => n.Paciente)
-                .Include(n => n.Doctor)
                 .OrderByDescending(n => n.FechaRegistro)
-                .Select(n => new NotaMedicaRespuestaDTO
-                {
-                    Id = n.Id,
-                    PacienteId = n.PacienteId,
-                    CitaId = n.CitaId,
-                    DoctorId = n.DoctorId,
-                    NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
-                    NombreDoctor = n.Doctor!.Nombre,
-                    MotivoConsulta = n.MotivoConsulta,
-                    FrecuenciaCardiaca = n.FrecuenciaCardiaca,
-                    FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
-                    Temperatura = n.Temperatura,
-                    SaturacionOxigeno = n.SaturacionOxigeno,
-                    Peso = n.Peso,
-                    Talla = n.Talla,
-                    IMC = n.IMC,
-                    ExploracionFisica = n.ExploracionFisica,
-                    Diagnostico = n.Diagnostico,
-                    CodigoCIE10 = n.CodigoCIE10,
-                    PlanTerapeutico = n.PlanTerapeutico,
-                    RecetaMedicamentos = n.RecetaMedicamentos,
-                    EstudiosAuxiliares = n.EstudiosAuxiliares,
-                    FechaRegistro = n.FechaRegistro
-                })
+                .Select(ProyeccionDto())
                 .ToListAsync();
 
             return Ok(notas);
         }
-        // 2. GET: api/NotasMedicas/5
+
+        // GET: api/NotasMedicas/historial/5
+        [HttpGet("historial/{pacienteId}")]
+        public async Task<ActionResult<IEnumerable<NotaMedicaRespuestaDTO>>> GetHistorialPorPaciente(int pacienteId)
+        {
+            var notas = await _context.NotasMedicas
+                .Where(n => n.PacienteId == pacienteId)
+                .OrderByDescending(n => n.FechaRegistro)
+                .Select(ProyeccionDto())
+                .ToListAsync();
+
+            return Ok(notas);
+        }
+
+        // GET: api/NotasMedicas/5
         [HttpGet("{id}")]
         public async Task<ActionResult<NotaMedicaRespuestaDTO>> GetNotaMedica(int id)
         {
             var nota = await _context.NotasMedicas
-                .Include(n => n.Paciente)
-                .Include(n => n.Doctor)
                 .Where(n => n.Id == id)
-                .Select(n => new NotaMedicaRespuestaDTO
-                {
-                    Id = n.Id,
-                    PacienteId = n.PacienteId,
-                    CitaId = n.CitaId,
-                    DoctorId = n.DoctorId,
-                    NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
-                    NombreDoctor = n.Doctor!.Nombre,
-                    MotivoConsulta = n.MotivoConsulta,
-                    FrecuenciaCardiaca = n.FrecuenciaCardiaca,
-                    FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
-                    Temperatura = n.Temperatura,
-                    SaturacionOxigeno = n.SaturacionOxigeno,
-                    Peso = n.Peso,
-                    Talla = n.Talla,
-                    IMC = n.IMC,
-                    ExploracionFisica = n.ExploracionFisica,
-                    Diagnostico = n.Diagnostico,
-                    CodigoCIE10 = n.CodigoCIE10,
-                    PlanTerapeutico = n.PlanTerapeutico,
-                    RecetaMedicamentos = n.RecetaMedicamentos,
-                    EstudiosAuxiliares = n.EstudiosAuxiliares,
-                    FechaRegistro = n.FechaRegistro
-                })
+                .Select(ProyeccionDto())
                 .FirstOrDefaultAsync();
 
             if (nota == null) return NotFound("Nota médica no encontrada.");
             return Ok(nota);
         }
 
-        // 3. POST: api/NotasMedicas (El médico guarda la consulta y se autocompleta la cita)
+        // POST: api/NotasMedicas
         [HttpPost]
         public async Task<ActionResult<NotaMedica>> PostNotaMedica(NotaMedica notaMedica)
         {
-            // A) Preparamos la nota médica para guardarla
+            bool notaExiste = await _context.NotasMedicas
+                .AnyAsync(n => n.CitaId == notaMedica.CitaId);
+
+            if (notaExiste)
+            {
+                return Conflict("Esta cita ya tiene una nota médica registrada.");
+            }
+
             _context.NotasMedicas.Add(notaMedica);
 
-            // B) Buscamos la cita que corresponde a esta nota
             var cita = await _context.Citas.FindAsync(notaMedica.CitaId);
-
-            // C) Si la cita existe, le cambiamos el estado automáticamente
             if (cita != null)
             {
                 cita.Estado = "Completada";
             }
 
-            // D) Ejecutamos los cambios en PostgreSQL (Guarda la nota Y actualiza la cita al mismo tiempo)
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetNotaMedica", new { id = notaMedica.Id }, notaMedica);
+            return CreatedAtAction(nameof(GetNotaMedica), new { id = notaMedica.Id }, notaMedica);
         }
 
-        // 4. PUT: api/NotasMedicas/5
+        // PUT: api/NotasMedicas/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutNotaMedica(int id, NotaMedica notaMedicaActualizada)
         {
             if (id != notaMedicaActualizada.Id) return BadRequest("El ID no coincide.");
 
+            bool citaYaTieneNota = await _context.NotasMedicas
+    .AnyAsync(n => n.CitaId == notaMedicaActualizada.CitaId && n.Id != id);
+
+            if (citaYaTieneNota)
+            {
+                return Conflict("Esa cita ya tiene otra nota médica registrada.");
+            }
+
             _context.Entry(notaMedicaActualizada).State = EntityState.Modified;
+            _context.Entry(notaMedicaActualizada).Property(n => n.FechaRegistro).IsModified = false;
 
             try
             {
@@ -136,7 +138,7 @@ namespace Clinica.Controllers
             return NoContent();
         }
 
-        // 5. DELETE: api/NotasMedicas/5
+        // DELETE: api/NotasMedicas/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteNotaMedica(int id)
         {

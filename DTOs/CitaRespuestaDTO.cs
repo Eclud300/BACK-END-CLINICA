@@ -3,13 +3,14 @@
     public class CitaRespuestaDTO
     {
         public int Id { get; set; }
+        public string? Folio { get; set; }
 
-        // Datos aplanados del Paciente (solo lo necesario para la lista)
+        // Datos aplanados del Paciente
         public int PacienteId { get; set; }
         public string NombrePaciente { get; set; } = null!;
         public string CurpPaciente { get; set; } = null!;
 
-        // Datos aplanados del Doctor (solo el nombre, CERO contraseñas)
+        // Datos aplanados del Doctor
         public int DoctorId { get; set; }
         public string NombreDoctor { get; set; } = null!;
         public string RolDoctor { get; set; } = null!;

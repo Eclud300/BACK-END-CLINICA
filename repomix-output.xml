@@ -1,0 +1,4172 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+Controllers/
+  AdminController.cs
+  CitasController.cs
+  ClinicasController.cs
+  InsumosController.cs
+  NotasMedicasController.cs
+  PacientesController.cs
+  UsuariosController.cs
+Data/
+  ClinicaDbContext.cs
+DTOs/
+  CitaRespuestaDTO.cs
+  DashboardDTO.cs
+  LoginDTO.cs
+  NotaMedicaRespuestaDTO.cs
+  UsuarioActualizarDTO.cs
+  UsuarioRespuestaDTO.cs
+Migrations/
+  20261108235947_Inicial.cs
+  20261108235947_Inicial.Designer.cs
+  20261116222045_AgregandoTablasMedicas.cs
+  20261116222045_AgregandoTablasMedicas.Designer.cs
+  20261116233013_ActualizacionExpedienteMedico.cs
+  20261116233013_ActualizacionExpedienteMedico.Designer.cs
+  20261117225435_AgregandoInventario.cs
+  20261117225435_AgregandoInventario.Designer.cs
+  ClinicaDbContextModelSnapshot.cs
+Models/
+  Cita.cs
+  ClinicaInfo.cs
+  Insumo.cs
+  NotaMedica.cs
+  Paciente.cs
+  Usuario.cs
+Properties/
+  launchSettings.json
+.gitignore
+appsettings.Development.json
+appsettings.json
+Clinica.csproj
+Clinica.http
+Clinica.slnx
+Program.cs
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="Controllers/AdminController.cs">
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.DTOs;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class AdminController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        public AdminController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Admin/estadisticas
+        [HttpGet("estadisticas")]
+        public async Task<ActionResult<DashboardDTO>> GetEstadisticas()
+        {
+            var inicioHoy = DateTime.UtcNow.Date;
+            var finHoy = inicioHoy.AddDays(1);
+
+            var totalCitasHoy = await _context.Citas
+                .CountAsync(c => c.FechaHora >= inicioHoy && c.FechaHora < finHoy);
+
+            var citasPendientes = await _context.Citas
+                .CountAsync(c => c.Estado == "Agendada" || c.Estado == "Pendiente" || c.Estado == "En Espera");
+
+            var totalPacientes = await _context.Pacientes.CountAsync();
+
+            return Ok(new DashboardDTO
+            {
+                TotalCitasHoy = totalCitasHoy,
+                CitasPendientes = citasPendientes,
+                TotalPacientes = totalPacientes
+            });
+        }
+    }
+}
+</file>
+
+<file path="Controllers/ClinicasController.cs">
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class ClinicasController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        public ClinicasController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Clinicas
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ClinicaInfo>>> GetClinicas()
+        {
+            return await _context.Clinicas.ToListAsync();
+        }
+
+        // GET: api/Clinicas/1
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ClinicaInfo>> GetClinica(int id)
+        {
+            var clinica = await _context.Clinicas.FindAsync(id);
+            if (clinica == null) return NotFound("Clínica no encontrada.");
+            return Ok(clinica);
+        }
+
+        // POST: api/Clinicas
+        [HttpPost]
+        public async Task<ActionResult<ClinicaInfo>> PostClinica(ClinicaInfo clinica)
+        {
+            _context.Clinicas.Add(clinica);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetClinica), new { id = clinica.Id }, clinica);
+        }
+
+        // PUT: api/Clinicas/1
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutClinica(int id, ClinicaInfo clinica)
+        {
+            if (id != clinica.Id) return BadRequest("El ID no coincide.");
+
+            _context.Entry(clinica).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Clinicas.Any(c => c.Id == id)) return NotFound();
+                throw;
+            }
+
+            return Ok(clinica);
+        }
+    }
+}
+</file>
+
+<file path="DTOs/DashboardDTO.cs">
+namespace Clinica.DTOs
+{
+    public class DashboardDTO
+    {
+        public int TotalCitasHoy { get; set; }
+        public int CitasPendientes { get; set; }
+        public int TotalPacientes { get; set; }
+    }
+}
+</file>
+
+<file path="DTOs/UsuarioActualizarDTO.cs">
+namespace Clinica.DTOs
+{
+    public class UsuarioActualizarDTO
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = null!;
+        public string Correo { get; set; } = null!;
+        public string Rol { get; set; } = null!;
+        public string? Estado { get; set; }
+        public string? Password { get; set; } // Opcional: solo si se desea cambiar la contraseña
+        public string? Telefono { get; set; }
+        public DateTime? FechaNacimiento { get; set; }
+        public string? Estudios { get; set; }
+        public string? UniversidadEgreso { get; set; }
+        public string? CedulaProfesional { get; set; }
+        public string? CedulaEspecialidad { get; set; }
+        public string? FirmaDigital { get; set; }
+        public decimal? PorcentajeComision { get; set; }
+        public decimal? TarifaConsulta { get; set; }
+    }
+}
+</file>
+
+<file path="DTOs/UsuarioRespuestaDTO.cs">
+namespace Clinica.DTOs
+{
+    public class UsuarioRespuestaDTO
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = null!;
+        public string Correo { get; set; } = null!;
+        public string Rol { get; set; } = null!;
+        public string Estado { get; set; } = null!;
+        public string? Telefono { get; set; }
+        public DateTime? FechaNacimiento { get; set; }
+        public string? Estudios { get; set; }
+        public string? UniversidadEgreso { get; set; }
+        public string? CedulaProfesional { get; set; }
+        public string? CedulaEspecialidad { get; set; }
+        public string? FirmaDigital { get; set; }
+        public decimal? PorcentajeComision { get; set; }
+        public decimal? TarifaConsulta { get; set; }
+        public DateTime FechaCreacion { get; set; }
+    }
+}
+</file>
+
+<file path="Models/ClinicaInfo.cs">
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("Clinicas")]
+    public class ClinicaInfo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(150)]
+        public string Nombre { get; set; } = string.Empty;
+
+        public string? Logo { get; set; }
+
+        [MaxLength(255)]
+        public string? Direccion { get; set; }
+
+        [MaxLength(30)]
+        public string? Telefono { get; set; }
+    }
+}
+</file>
+
+<file path="Controllers/InsumosController.cs">
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class InsumosController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        public InsumosController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Insumos
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Insumo>>> GetInsumos()
+        {
+            return await _context.Insumos.ToListAsync();
+        }
+
+        // GET: api/Insumos/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Insumo>> GetInsumo(int id)
+        {
+            var insumo = await _context.Insumos.FindAsync(id);
+            if (insumo == null) return NotFound("Insumo no encontrado.");
+            return Ok(insumo);
+        }
+
+        // POST: api/Insumos
+        [HttpPost]
+        public async Task<ActionResult<Insumo>> PostInsumo(Insumo insumo)
+        {
+            var nombreNormalizado = insumo.Nombre.Trim().ToLower();
+            bool insumoExiste = await _context.Insumos
+                .AnyAsync(i => i.Nombre.ToLower() == nombreNormalizado);
+
+            if (insumoExiste)
+            {
+                return Conflict("Ya existe un insumo registrado con ese nombre.");
+            }
+
+            insumo.Nombre = insumo.Nombre.Trim();
+            _context.Insumos.Add(insumo);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetInsumo), new { id = insumo.Id }, insumo);
+        }
+
+        // PUT: api/Insumos/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutInsumo(int id, Insumo insumo)
+        {
+            if (id != insumo.Id) return BadRequest("El ID no coincide.");
+
+            var nombreNormalizado = insumo.Nombre.Trim().ToLower();
+            bool insumoExiste = await _context.Insumos
+                .AnyAsync(i => i.Nombre.ToLower() == nombreNormalizado && i.Id != id);
+
+            if (insumoExiste)
+            {
+                return Conflict("Ya existe otro insumo registrado con ese nombre.");
+            }
+
+            insumo.Nombre = insumo.Nombre.Trim();
+            _context.Entry(insumo).State = EntityState.Modified;
+            _context.Entry(insumo).Property(i => i.FechaRegistro).IsModified = false;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Insumos.Any(e => e.Id == id)) return NotFound();
+                else throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Insumos/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteInsumo(int id)
+        {
+            var insumo = await _context.Insumos.FindAsync(id);
+            if (insumo == null) return NotFound();
+
+            _context.Insumos.Remove(insumo);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+    }
+}
+</file>
+
+<file path="Controllers/PacientesController.cs">
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class PacientesController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        public PacientesController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Pacientes
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Paciente>>> GetPacientes()
+        {
+            return await _context.Pacientes.ToListAsync();
+        }
+
+        // GET: api/Pacientes/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Paciente>> GetPaciente(int id)
+        {
+            var paciente = await _context.Pacientes.FindAsync(id);
+            if (paciente == null) return NotFound("Paciente no encontrado.");
+            return paciente;
+        }
+
+        // POST: api/Pacientes
+        [HttpPost]
+        public async Task<ActionResult<Paciente>> PostPaciente(Paciente paciente)
+        {
+            var curpNormalizada = paciente.CURP.Trim().ToUpper();
+            bool curpExiste = await _context.Pacientes
+                .AnyAsync(p => p.CURP.ToUpper() == curpNormalizada);
+
+            if (curpExiste)
+            {
+                return Conflict("Ya existe un paciente registrado con esa CURP.");
+            }
+
+            paciente.CURP = curpNormalizada;
+            _context.Pacientes.Add(paciente);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetPaciente), new { id = paciente.Id }, paciente);
+        }
+
+        // PUT: api/Pacientes/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutPaciente(int id, Paciente pacienteActualizado)
+        {
+            if (id != pacienteActualizado.Id) return BadRequest("El ID no coincide.");
+
+            var curpNormalizada = pacienteActualizado.CURP.Trim().ToUpper();
+            bool curpExiste = await _context.Pacientes
+                .AnyAsync(p => p.CURP.ToUpper() == curpNormalizada && p.Id != id);
+
+            if (curpExiste)
+            {
+                return Conflict("Ya existe otro paciente registrado con esa CURP.");
+            }
+
+            pacienteActualizado.CURP = curpNormalizada;
+            _context.Entry(pacienteActualizado).State = EntityState.Modified;
+            _context.Entry(pacienteActualizado).Property(p => p.FechaRegistro).IsModified = false;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!PacienteExists(id)) return NotFound();
+                else throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Pacientes/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePaciente(int id)
+        {
+            var paciente = await _context.Pacientes.FindAsync(id);
+            if (paciente == null) return NotFound();
+
+            _context.Pacientes.Remove(paciente);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool PacienteExists(int id)
+        {
+            return _context.Pacientes.Any(e => e.Id == id);
+        }
+    }
+}
+</file>
+
+<file path="Controllers/UsuariosController.cs">
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+using Clinica.DTOs;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq.Expressions;
+using System.Security.Claims;
+using System.Text;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class UsuariosController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+        private readonly IConfiguration _config;
+
+        private static Expression<Func<Usuario, UsuarioRespuestaDTO>> ProyeccionDto() => u => new UsuarioRespuestaDTO
+        {
+            Id = u.Id,
+            Nombre = u.Nombre,
+            Correo = u.Correo,
+            Rol = u.Rol,
+            Estado = u.Estado,
+            Telefono = u.Telefono,
+            FechaNacimiento = u.FechaNacimiento,
+            Estudios = u.Estudios,
+            UniversidadEgreso = u.UniversidadEgreso,
+            CedulaProfesional = u.CedulaProfesional,
+            CedulaEspecialidad = u.CedulaEspecialidad,
+            FirmaDigital = u.FirmaDigital,
+            PorcentajeComision = u.PorcentajeComision,
+            TarifaConsulta = u.TarifaConsulta,
+            FechaCreacion = u.FechaCreacion
+        };
+
+        private static readonly Func<Usuario, UsuarioRespuestaDTO> MapearDto = ProyeccionDto().Compile();
+
+        public UsuariosController(ClinicaDbContext context, IConfiguration config)
+        {
+            _context = context;
+            _config = config;
+        }
+
+        // GET: api/Usuarios
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<UsuarioRespuestaDTO>>> GetUsuarios()
+        {
+            var usuarios = await _context.Usuarios
+                .Select(ProyeccionDto())
+                .ToListAsync();
+
+            return Ok(usuarios);
+        }
+
+        // GET: api/Usuarios/5
+        [Authorize]
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UsuarioRespuestaDTO>> GetUsuario(int id)
+        {
+            var usuario = await _context.Usuarios
+                .Where(u => u.Id == id)
+                .Select(ProyeccionDto())
+                .FirstOrDefaultAsync();
+
+            if (usuario == null) return NotFound("Usuario no encontrado.");
+            return Ok(usuario);
+        }
+
+        // POST: api/Usuarios
+        [HttpPost]
+        public async Task<ActionResult<UsuarioRespuestaDTO>> PostUsuario(Usuario usuario)
+        {
+            var correoNormalizado = usuario.Correo.Trim().ToLower();
+            bool correoExiste = await _context.Usuarios
+                .AnyAsync(u => u.Correo.ToLower() == correoNormalizado);
+
+            if (correoExiste)
+            {
+                return Conflict("Ya existe un usuario registrado con ese correo.");
+            }
+
+            usuario.Correo = correoNormalizado;
+            usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(usuario.PasswordHash);
+            if (string.IsNullOrWhiteSpace(usuario.Estado))
+            {
+                usuario.Estado = "Activo";
+            }
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, MapearDto(usuario));
+        }
+
+        // PUT: api/Usuarios/5
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutUsuario(int id, UsuarioActualizarDTO dto)
+        {
+            if (id != dto.Id) return BadRequest("Los IDs no coinciden.");
+
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound("Usuario no encontrado.");
+
+            var correoNormalizado = dto.Correo.Trim().ToLower();
+            bool correoExiste = await _context.Usuarios
+                .AnyAsync(u => u.Correo.ToLower() == correoNormalizado && u.Id != id);
+
+            if (correoExiste)
+            {
+                return Conflict("Ya existe otro usuario registrado con ese correo.");
+            }
+
+            usuario.Nombre = dto.Nombre;
+            usuario.Correo = correoNormalizado;
+            usuario.Rol = dto.Rol;
+            if (!string.IsNullOrWhiteSpace(dto.Estado)) usuario.Estado = dto.Estado;
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            }
+
+            usuario.Telefono = dto.Telefono;
+            usuario.FechaNacimiento = dto.FechaNacimiento;
+            usuario.Estudios = dto.Estudios;
+            usuario.UniversidadEgreso = dto.UniversidadEgreso;
+            usuario.CedulaProfesional = dto.CedulaProfesional;
+            usuario.CedulaEspecialidad = dto.CedulaEspecialidad;
+            usuario.FirmaDigital = dto.FirmaDigital;
+            usuario.PorcentajeComision = dto.PorcentajeComision;
+            usuario.TarifaConsulta = dto.TarifaConsulta;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // PUT: api/Usuarios/5/suspender
+        [Authorize]
+        [HttpPut("{id}/suspender")]
+        public async Task<IActionResult> SuspenderUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound("Usuario no encontrado.");
+
+            usuario.Estado = "Suspendido";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = $"El acceso para {usuario.Nombre} ha sido suspendido." });
+        }
+
+        // PUT: api/Usuarios/5/activar
+        [Authorize]
+        [HttpPut("{id}/activar")]
+        public async Task<IActionResult> ActivarUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound("Usuario no encontrado.");
+
+            usuario.Estado = "Activo";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = $"El acceso para {usuario.Nombre} ha sido reactivado." });
+        }
+
+        // POST: api/Usuarios/login
+        [HttpPost("login")]
+        public async Task<ActionResult<string>> Login(LoginDTO loginDto)
+        {
+            var correoNormalizado = loginDto.Correo.Trim().ToLower();
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Correo.ToLower() == correoNormalizado);
+
+            if (usuario == null) return Unauthorized("Correo o contraseña incorrectos.");
+
+            if (usuario.Estado == "Suspendido")
+            {
+                return Unauthorized("Tu cuenta ha sido suspendida. Contacta al administrador.");
+            }
+
+            bool passwordValida = BCrypt.Net.BCrypt.Verify(loginDto.Password, usuario.PasswordHash);
+            if (!passwordValida) return Unauthorized("Correo o contraseña incorrectos.");
+
+            usuario.UltimoLogin = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new Claim(ClaimTypes.Email, usuario.Correo),
+                new Claim(ClaimTypes.Role, usuario.Rol)
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(8),
+                signingCredentials: creds
+            );
+
+            return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+        }
+    }
+}
+</file>
+
+<file path="DTOs/CitaRespuestaDTO.cs">
+namespace Clinica.DTOs
+{
+    public class CitaRespuestaDTO
+    {
+        public int Id { get; set; }
+        public string? Folio { get; set; }
+
+        // Datos aplanados del Paciente
+        public int PacienteId { get; set; }
+        public string NombrePaciente { get; set; } = null!;
+        public string CurpPaciente { get; set; } = null!;
+
+        // Datos aplanados del Doctor
+        public int DoctorId { get; set; }
+        public string NombreDoctor { get; set; } = null!;
+        public string RolDoctor { get; set; } = null!;
+
+        // Datos de la Cita
+        public DateTime FechaHora { get; set; }
+        public string? MotivoConsulta { get; set; }
+        public string Estado { get; set; } = null!;
+        public string? NotasRecepcion { get; set; }
+    }
+}
+</file>
+
+<file path="DTOs/LoginDTO.cs">
+namespace Clinica.DTOs
+{
+    public class LoginDTO
+    {
+        public string Correo { get; set; } = null!;
+        public string Password { get; set; } = null!;
+    }
+}
+</file>
+
+<file path="Migrations/20261108235947_Inicial.cs">
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    /// <inheritdoc />
+    public partial class Inicial : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "Usuarios",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Correo = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    Rol = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Telefono = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FechaNacimiento = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Estudios = table.Column<string>(type: "text", nullable: true),
+                    UniversidadEgreso = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    CedulaProfesional = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    CedulaEspecialidad = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    FirmaDigital = table.Column<string>(type: "text", nullable: true),
+                    PorcentajeComision = table.Column<decimal>(type: "numeric", nullable: true),
+                    TarifaConsulta = table.Column<decimal>(type: "numeric", nullable: true),
+                    FechaFirmaPrivacidad = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    UltimoLogin = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Requiere2FA = table.Column<bool>(type: "boolean", nullable: false),
+                    Secreto2FA = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    IntentosFallidos = table.Column<int>(type: "integer", nullable: false),
+                    BloqueadoHasta = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Usuarios", x => x.Id);
+                });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "Usuarios");
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261108235947_Inicial.Designer.cs">
+// <auto-generated />
+using System;
+using Clinica.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    [DbContext(typeof(ClinicaDbContext))]
+    [Migration("20261108235947_Inicial")]
+    partial class Inicial
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Clinica.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CedulaEspecialidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CedulaProfesional")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estudios")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFirmaPrivacidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("Requiere2FA")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Secreto2FA")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("TarifaConsulta")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UltimoLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UniversidadEgreso")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261116222045_AgregandoTablasMedicas.cs">
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    /// <inheritdoc />
+    public partial class AgregandoTablasMedicas : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "Pacientes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Apellidos = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Telefono = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    FechaNacimiento = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Alergias = table.Column<string>(type: "text", nullable: true),
+                    ContactoEmergencia = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    FechaRegistro = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pacientes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Citas",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    PacienteId = table.Column<int>(type: "integer", nullable: false),
+                    DoctorId = table.Column<int>(type: "integer", nullable: false),
+                    FechaHora = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MotivoConsulta = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    Estado = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    NotasRecepcion = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Citas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Citas_Pacientes_PacienteId",
+                        column: x => x.PacienteId,
+                        principalTable: "Pacientes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Citas_Usuarios_DoctorId",
+                        column: x => x.DoctorId,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NotasMedicas",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    PacienteId = table.Column<int>(type: "integer", nullable: false),
+                    CitaId = table.Column<int>(type: "integer", nullable: false),
+                    DoctorId = table.Column<int>(type: "integer", nullable: false),
+                    Peso = table.Column<decimal>(type: "numeric", nullable: true),
+                    PresionArterial = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: true),
+                    Sintomas = table.Column<string>(type: "text", nullable: false),
+                    Diagnostico = table.Column<string>(type: "text", nullable: false),
+                    Tratamiento = table.Column<string>(type: "text", nullable: false),
+                    FechaRegistro = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NotasMedicas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_NotasMedicas_Citas_CitaId",
+                        column: x => x.CitaId,
+                        principalTable: "Citas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NotasMedicas_Pacientes_PacienteId",
+                        column: x => x.PacienteId,
+                        principalTable: "Pacientes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NotasMedicas_Usuarios_DoctorId",
+                        column: x => x.DoctorId,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Citas_DoctorId",
+                table: "Citas",
+                column: "DoctorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Citas_PacienteId",
+                table: "Citas",
+                column: "PacienteId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotasMedicas_CitaId",
+                table: "NotasMedicas",
+                column: "CitaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotasMedicas_DoctorId",
+                table: "NotasMedicas",
+                column: "DoctorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotasMedicas_PacienteId",
+                table: "NotasMedicas",
+                column: "PacienteId");
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "NotasMedicas");
+
+            migrationBuilder.DropTable(
+                name: "Citas");
+
+            migrationBuilder.DropTable(
+                name: "Pacientes");
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261116222045_AgregandoTablasMedicas.Designer.cs">
+// <auto-generated />
+using System;
+using Clinica.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    [DbContext(typeof(ClinicaDbContext))]
+    [Migration("20261116222045_AgregandoTablasMedicas")]
+    partial class AgregandoTablasMedicas
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MotivoConsulta")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("NotasRecepcion")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CitaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Diagnostico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Peso")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PresionArterial")
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("Sintomas")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tratamiento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CitaId");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("NotasMedicas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Paciente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Alergias")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContactoEmergencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pacientes");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CedulaEspecialidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CedulaProfesional")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estudios")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFirmaPrivacidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("Requiere2FA")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Secreto2FA")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("TarifaConsulta")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UltimoLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UniversidadEgreso")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.HasOne("Clinica.Models.Cita", "Cita")
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261116233013_ActualizacionExpedienteMedico.cs">
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    /// <inheritdoc />
+    public partial class ActualizacionExpedienteMedico : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "PresionArterial",
+                table: "NotasMedicas");
+
+            migrationBuilder.RenameColumn(
+                name: "Tratamiento",
+                table: "NotasMedicas",
+                newName: "PlanTerapeutico");
+
+            migrationBuilder.RenameColumn(
+                name: "Sintomas",
+                table: "NotasMedicas",
+                newName: "MotivoConsulta");
+
+            migrationBuilder.AddColumn<string>(
+                name: "AntecedentesHeredoFamiliares",
+                table: "Pacientes",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "AntecedentesNoPatologicos",
+                table: "Pacientes",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "AntecedentesPatologicos",
+                table: "Pacientes",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "CURP",
+                table: "Pacientes",
+                type: "character varying(20)",
+                maxLength: 20,
+                nullable: false,
+                defaultValue: "");
+
+            migrationBuilder.AddColumn<string>(
+                name: "Direccion",
+                table: "Pacientes",
+                type: "character varying(255)",
+                maxLength: 255,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "FotoUrl",
+                table: "Pacientes",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Sexo",
+                table: "Pacientes",
+                type: "character varying(15)",
+                maxLength: 15,
+                nullable: false,
+                defaultValue: "");
+
+            migrationBuilder.AlterColumn<decimal>(
+                name: "Peso",
+                table: "NotasMedicas",
+                type: "numeric(5,2)",
+                nullable: true,
+                oldClrType: typeof(decimal),
+                oldType: "numeric",
+                oldNullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "CodigoCIE10",
+                table: "NotasMedicas",
+                type: "character varying(20)",
+                maxLength: 20,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "EstudiosAuxiliares",
+                table: "NotasMedicas",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ExploracionFisica",
+                table: "NotasMedicas",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "FrecuenciaCardiaca",
+                table: "NotasMedicas",
+                type: "character varying(10)",
+                maxLength: 10,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "FrecuenciaRespiratoria",
+                table: "NotasMedicas",
+                type: "character varying(10)",
+                maxLength: 10,
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "IMC",
+                table: "NotasMedicas",
+                type: "numeric(5,2)",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "RecetaMedicamentos",
+                table: "NotasMedicas",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "SaturacionOxigeno",
+                table: "NotasMedicas",
+                type: "character varying(10)",
+                maxLength: 10,
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "Talla",
+                table: "NotasMedicas",
+                type: "numeric(4,2)",
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "Temperatura",
+                table: "NotasMedicas",
+                type: "numeric(4,2)",
+                nullable: true);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "AntecedentesHeredoFamiliares",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "AntecedentesNoPatologicos",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "AntecedentesPatologicos",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "CURP",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "Direccion",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "FotoUrl",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "Sexo",
+                table: "Pacientes");
+
+            migrationBuilder.DropColumn(
+                name: "CodigoCIE10",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "EstudiosAuxiliares",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "ExploracionFisica",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "FrecuenciaCardiaca",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "FrecuenciaRespiratoria",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "IMC",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "RecetaMedicamentos",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "SaturacionOxigeno",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "Talla",
+                table: "NotasMedicas");
+
+            migrationBuilder.DropColumn(
+                name: "Temperatura",
+                table: "NotasMedicas");
+
+            migrationBuilder.RenameColumn(
+                name: "PlanTerapeutico",
+                table: "NotasMedicas",
+                newName: "Tratamiento");
+
+            migrationBuilder.RenameColumn(
+                name: "MotivoConsulta",
+                table: "NotasMedicas",
+                newName: "Sintomas");
+
+            migrationBuilder.AlterColumn<decimal>(
+                name: "Peso",
+                table: "NotasMedicas",
+                type: "numeric",
+                nullable: true,
+                oldClrType: typeof(decimal),
+                oldType: "numeric(5,2)",
+                oldNullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "PresionArterial",
+                table: "NotasMedicas",
+                type: "character varying(15)",
+                maxLength: 15,
+                nullable: true);
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261116233013_ActualizacionExpedienteMedico.Designer.cs">
+// <auto-generated />
+using System;
+using Clinica.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    [DbContext(typeof(ClinicaDbContext))]
+    [Migration("20261116233013_ActualizacionExpedienteMedico")]
+    partial class ActualizacionExpedienteMedico
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MotivoConsulta")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("NotasRecepcion")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CitaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodigoCIE10")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Diagnostico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EstudiosAuxiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExploracionFisica")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FrecuenciaCardiaca")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("FrecuenciaRespiratoria")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("IMC")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("MotivoConsulta")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Peso")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("PlanTerapeutico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecetaMedicamentos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SaturacionOxigeno")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("Talla")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<decimal?>("Temperatura")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CitaId");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("NotasMedicas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Paciente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Alergias")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesHeredoFamiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesNoPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CURP")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContactoEmergencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FotoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Sexo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pacientes");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CedulaEspecialidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CedulaProfesional")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estudios")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFirmaPrivacidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("Requiere2FA")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Secreto2FA")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("TarifaConsulta")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UltimoLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UniversidadEgreso")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.HasOne("Clinica.Models.Cita", "Cita")
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261117225435_AgregandoInventario.cs">
+using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    /// <inheritdoc />
+    public partial class AgregandoInventario : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "Insumos",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    UnidadMedida = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    FechaCaducidad = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FechaRegistro = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Insumos", x => x.Id);
+                });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "Insumos");
+        }
+    }
+}
+</file>
+
+<file path="Migrations/20261117225435_AgregandoInventario.Designer.cs">
+// <auto-generated />
+using System;
+using Clinica.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    [DbContext(typeof(ClinicaDbContext))]
+    [Migration("20261117225435_AgregandoInventario")]
+    partial class AgregandoInventario
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MotivoConsulta")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("NotasRecepcion")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Insumo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FechaCaducidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("UnidadMedida")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Insumos");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CitaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodigoCIE10")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Diagnostico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EstudiosAuxiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExploracionFisica")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FrecuenciaCardiaca")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("FrecuenciaRespiratoria")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("IMC")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("MotivoConsulta")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Peso")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("PlanTerapeutico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecetaMedicamentos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SaturacionOxigeno")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("Talla")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<decimal?>("Temperatura")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CitaId");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("NotasMedicas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Paciente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Alergias")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesHeredoFamiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesNoPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CURP")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContactoEmergencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FotoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Sexo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pacientes");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CedulaEspecialidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CedulaProfesional")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estudios")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFirmaPrivacidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("Requiere2FA")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Secreto2FA")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("TarifaConsulta")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UltimoLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UniversidadEgreso")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.HasOne("Clinica.Models.Cita", "Cita")
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+</file>
+
+<file path="Models/Cita.cs">
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("Citas")]
+    public class Cita
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [MaxLength(50)]
+        public string? Folio { get; set; }
+
+        // Relación con el Paciente
+        [Required]
+        public int PacienteId { get; set; }
+        [ForeignKey("PacienteId")]
+        public Paciente? Paciente { get; set; }
+
+        // Relación con el Doctor (Usuario)
+        [Required]
+        public int DoctorId { get; set; }
+        [ForeignKey("DoctorId")]
+        public Usuario? Doctor { get; set; }
+
+        [Required]
+        public DateTime FechaHora { get; set; }
+
+        [MaxLength(255)]
+        public string? MotivoConsulta { get; set; }
+
+        [MaxLength(20)]
+        public string Estado { get; set; } = "Agendada"; // Agendada, En Espera, Completada, Cancelada
+
+        public string? NotasRecepcion { get; set; }
+    }
+}
+</file>
+
+<file path="Models/Insumo.cs">
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("Insumos")]
+    public class Insumo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string Nombre { get; set; } = null!;
+
+        [Required]
+        public int Cantidad { get; set; }
+
+        [MaxLength(50)]
+        public string? UnidadMedida { get; set; } // Ej: Cajas, Piezas, Frascos
+
+        [MaxLength(30)]
+        public string Estado { get; set; } = "Óptimo"; // Ej: Óptimo, Bajo, Agotado
+
+        public DateTime? FechaCaducidad { get; set; }
+
+        public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+    }
+}
+</file>
+
+<file path="Models/NotaMedica.cs">
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("NotasMedicas")]
+    public class NotaMedica
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int PacienteId { get; set; }
+        [ForeignKey("PacienteId")]
+        public Paciente? Paciente { get; set; }
+
+        [Required]
+        public int CitaId { get; set; }
+        [ForeignKey("CitaId")]
+        public Cita? Cita { get; set; }
+
+        [Required]
+        public int DoctorId { get; set; }
+        [ForeignKey("DoctorId")]
+        public Usuario? Doctor { get; set; }
+
+        // Sección 3: Padecimiento Actual y Signos Vitales (S.V.)
+        [Required]
+        public string MotivoConsulta { get; set; } = null!;
+
+        [MaxLength(10)]
+        public string? FrecuenciaCardiaca { get; set; } // FC
+
+        [MaxLength(10)]
+        public string? FrecuenciaRespiratoria { get; set; } // FR
+
+        [Column(TypeName = "decimal(4,2)")]
+        public decimal? Temperatura { get; set; } // Temp
+
+        [MaxLength(10)]
+        public string? SaturacionOxigeno { get; set; } // SatO2
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? Peso { get; set; } // En kg
+
+        [Column(TypeName = "decimal(4,2)")]
+        public decimal? Talla { get; set; } // En metros
+
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? IMC { get; set; }
+
+        // Sección 4: Exploración Física
+        public string? ExploracionFisica { get; set; }
+
+        // Sección 5: Diagnósticos y Plan
+        [Required]
+        public string Diagnostico { get; set; } = null!;
+
+        [MaxLength(20)]
+        public string? CodigoCIE10 { get; set; }
+
+        [Required]
+        public string PlanTerapeutico { get; set; } = null!;
+
+        public string? RecetaMedicamentos { get; set; }
+
+        public string? EstudiosAuxiliares { get; set; }
+
+        public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+    }
+}
+</file>
+
+<file path="Models/Paciente.cs">
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("Pacientes")]
+    public class Paciente
+    {
+        [Key]
+        public int Id { get; set; }
+
+        // Identificación del Paciente
+        public string? FotoUrl { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Nombre { get; set; } = null!;
+
+        [Required]
+        [MaxLength(100)]
+        public string Apellidos { get; set; } = null!;
+
+        [Required]
+        [MaxLength(20)]
+        public string CURP { get; set; } = null!;
+
+        [Required]
+        [MaxLength(15)]
+        public string Sexo { get; set; } = null!;
+
+        public DateTime? FechaNacimiento { get; set; } // Se usa para calcular la edad
+
+        // Sección 1: Datos de Identificación
+        [MaxLength(255)]
+        public string? Direccion { get; set; }
+
+        [MaxLength(20)]
+        public string? Telefono { get; set; }
+
+        [MaxLength(100)]
+        public string? ContactoEmergencia { get; set; }
+
+        // Sección 2: Antecedentes
+        public string? AntecedentesHeredoFamiliares { get; set; }
+
+        public string? AntecedentesPatologicos { get; set; }
+
+        public string? Alergias { get; set; } // El dueño pidió destacarlas en rojo (Esto se hará en Angular)
+
+        public string? AntecedentesNoPatologicos { get; set; }
+
+        public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+    }
+}
+</file>
+
+<file path="Models/Usuario.cs">
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Clinica.Models
+{
+    [Table("Usuarios")]
+    public class Usuario
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string Nombre { get; set; } = null!;
+
+        [Required]
+        [MaxLength(100)]
+        public string Correo { get; set; } = null!;
+
+        [Required]
+        public string PasswordHash { get; set; } = null!;
+
+        [Required]
+        [MaxLength(20)]
+        public string Rol { get; set; } = null!;
+
+        [Required]
+        [MaxLength(20)]
+        public string Estado { get; set; } = "Activo"; // Activo, Suspendido
+
+        // Datos personales y de contacto (Opcionales)
+        [MaxLength(20)]
+        public string? Telefono { get; set; }
+        public DateTime? FechaNacimiento { get; set; }
+
+        // Datos Profesionales
+        public string? Estudios { get; set; }
+        [MaxLength(150)]
+        public string? UniversidadEgreso { get; set; }
+        [MaxLength(50)]
+        public string? CedulaProfesional { get; set; }
+        [MaxLength(50)]
+        public string? CedulaEspecialidad { get; set; }
+        public string? FirmaDigital { get; set; }
+
+        // Finanzas
+        public decimal? PorcentajeComision { get; set; }
+        public decimal? TarifaConsulta { get; set; }
+
+        // Seguridad
+        public DateTime? FechaFirmaPrivacidad { get; set; }
+        public DateTime? UltimoLogin { get; set; }
+        public bool Requiere2FA { get; set; } = false;
+        [MaxLength(255)]
+        public string? Secreto2FA { get; set; }
+        public int IntentosFallidos { get; set; } = 0;
+        public DateTime? BloqueadoHasta { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    }
+}
+</file>
+
+<file path="Properties/launchSettings.json">
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:63007",
+      "sslPort": 44309
+    }
+  },
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5174",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "https://localhost:7290;http://localhost:5174",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+</file>
+
+<file path=".gitignore">
+## Ignore Visual Studio temporary files, build results, and
+## files generated by popular Visual Studio add-ons.
+##
+## Get latest from `dotnet new gitignore`
+
+# dotenv files
+.env
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Mono auto generated files
+mono_crash.*
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+# Uncomment if you have tasks that create the project's static files in wwwroot
+#wwwroot/
+
+# Visual Studio 2017 auto generated files
+Generated\ Files/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# Build Results of an ATL Project
+[Dd]ebugPS/
+[Rr]eleasePS/
+dlldata.c
+
+# Benchmark Results
+BenchmarkDotNet.Artifacts/
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Tye
+.tye/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+# but not Directory.Build.rsp, as it configures directory-level build defaults
+!Directory.Build.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Chutzpah Test files
+_Chutzpah*
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Visual Studio Trace Files
+*.e2e
+
+# TFS 2012 Local Workspace
+$tf/
+
+# Guidance Automation Toolkit
+*.gpState
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# TeamCity is a build add-in
+_TeamCity*
+
+# DotCover is a Code Coverage Tool
+*.dotCover
+
+# AxoCover is a Code Coverage Tool
+.axoCover/*
+!.axoCover/settings.json
+
+# Coverlet is a free, cross platform Code Coverage Tool
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Visual Studio code coverage results
+*.coverage
+*.coveragexml
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# MightyMoose
+*.mm.*
+AutoTest.Net/
+
+# Web workbench (sass)
+.sass-cache/
+
+# Installshield output folder
+[Ee]xpress/
+
+# DocProject is a documentation generator add-in
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+
+# Click-Once directory
+publish/
+
+# Publish Web Output
+*.[Pp]ublish.xml
+*.azurePubxml
+# Note: Comment the next line if you want to checkin your web deploy settings,
+# but database connection strings (with potential passwords) will be unencrypted
+*.pubxml
+*.publishproj
+
+# Microsoft Azure Web App publish settings. Comment the next line if you want to
+# checkin your Azure Web App publish settings, but sensitive information contained
+# in these scripts will be unencrypted
+PublishScripts/
+
+# NuGet Packages
+*.nupkg
+# NuGet Symbol Packages
+*.snupkg
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/
+# Uncomment if necessary however generally it will be regenerated when needed
+#!**/[Pp]ackages/repositories.config
+# NuGet v3's project.json files produces more ignorable files
+*.nuget.props
+*.nuget.targets
+
+# Microsoft Azure Build Output
+csx/
+*.build.csdef
+
+# Microsoft Azure Emulator
+ecf/
+rcf/
+
+# Windows Store app package directories and files
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.appx
+*.appxbundle
+*.appxupload
+
+# Visual Studio cache files
+# files ending in .cache can be ignored
+*.[Cc]ache
+# but keep track of directories ending in .cache
+!?*.[Cc]ache/
+
+# Others
+ClientBin/
+~$*
+*~
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# Including strong name files can present a security risk
+# (https://github.com/github/gitignore/pull/2483#issue-259490424)
+#*.snk
+
+# Since there are multiple workflows, uncomment next line to ignore bower_components
+# (https://github.com/github/gitignore/pull/1529#issuecomment-104372622)
+#bower_components/
+
+# RIA/Silverlight projects
+Generated_Code/
+
+# Backup & report files from converting an old project file
+# to a newer Visual Studio version. Backup files are not needed,
+# because we have git ;-)
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.XML
+UpgradeLog*.htm
+ServiceFabricBackup/
+*.rptproj.bak
+
+# SQL Server files
+*.mdf
+*.ldf
+*.ndf
+
+# Business Intelligence projects
+*.rdl.data
+*.bim.layout
+*.bim_*.settings
+*.rptproj.rsuser
+*- [Bb]ackup.rdl
+*- [Bb]ackup ([0-9]).rdl
+*- [Bb]ackup ([0-9][0-9]).rdl
+
+# Microsoft Fakes
+FakesAssemblies/
+
+# GhostDoc plugin setting file
+*.GhostDoc.xml
+
+# Node.js Tools for Visual Studio
+.ntvs_analysis.dat
+node_modules/
+
+# Visual Studio 6 build log
+*.plg
+
+# Visual Studio 6 workspace options file
+*.opt
+
+# Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
+*.vbw
+
+# Visual Studio 6 auto-generated project file (contains which files were open etc.)
+*.vbp
+
+# Visual Studio 6 workspace and project file (working project files containing files to include in project)
+*.dsw
+*.dsp
+
+# Visual Studio 6 technical files
+*.ncb
+*.aps
+
+# Visual Studio LightSwitch build output
+**/*.HTMLClient/GeneratedArtifacts
+**/*.DesktopClient/GeneratedArtifacts
+**/*.DesktopClient/ModelManifest.xml
+**/*.Server/GeneratedArtifacts
+**/*.Server/ModelManifest.xml
+_Pvt_Extensions
+
+# Paket dependency manager
+.paket/paket.exe
+paket-files/
+
+# FAKE - F# Make
+.fake/
+
+# CodeRush personal settings
+.cr/personal
+
+# Python Tools for Visual Studio (PTVS)
+__pycache__/
+*.pyc
+
+# Cake - Uncomment if you are using it
+# tools/**
+# !tools/packages.config
+
+# Tabs Studio
+*.tss
+
+# Telerik's JustMock configuration file
+*.jmconfig
+
+# BizTalk build output
+*.btp.cs
+*.btm.cs
+*.odx.cs
+*.xsd.cs
+
+# OpenCover UI analysis results
+OpenCover/
+
+# Azure Stream Analytics local run output
+ASALocalRun/
+
+# MSBuild Binary and Structured Log
+*.binlog
+
+# NVidia Nsight GPU debugger configuration file
+*.nvuser
+
+# MFractors (Xamarin productivity tool) working folder
+.mfractor/
+
+# Local History for Visual Studio
+.localhistory/
+
+# Visual Studio History (VSHistory) files
+.vshistory/
+
+# BeatPulse healthcheck temp database
+healthchecksdb
+
+# Backup folder for Package Reference Convert tool in Visual Studio 2017
+MigrationBackup/
+
+# Ionide (cross platform F# VS Code tools) working folder
+.ionide/
+
+# Fody - auto-generated XML schema
+FodyWeavers.xsd
+
+# VS Code files for those working on multiple tools
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Windows Installer files from build outputs
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# JetBrains Rider
+*.sln.iml
+.idea/
+
+##
+## Visual studio for Mac
+##
+
+
+# globs
+Makefile.in
+*.userprefs
+*.usertasks
+config.make
+config.status
+aclocal.m4
+install-sh
+autom4te.cache/
+*.tar.gz
+tarballs/
+test-results/
+
+# content below from: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# content below from: https://github.com/github/gitignore/blob/main/Global/Windows.gitignore
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# Vim temporary swap files
+*.swp
+</file>
+
+<file path="appsettings.Development.json">
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+</file>
+
+<file path="Clinica.http">
+@Clinica_HostAddress = http://localhost:5174
+
+GET {{Clinica_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+</file>
+
+<file path="Clinica.slnx">
+<Solution>
+  <Project Path="Clinica.csproj" />
+</Solution>
+</file>
+
+<file path="Controllers/CitasController.cs">
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+using Clinica.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Linq.Expressions;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class CitasController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        private static Expression<Func<Cita, CitaRespuestaDTO>> ProyeccionDto() => c => new CitaRespuestaDTO
+        {
+            Id = c.Id,
+            Folio = c.Folio,
+            PacienteId = c.PacienteId,
+            NombrePaciente = c.Paciente!.Nombre + " " + c.Paciente.Apellidos,
+            CurpPaciente = c.Paciente.CURP,
+            DoctorId = c.DoctorId,
+            NombreDoctor = c.Doctor!.Nombre,
+            RolDoctor = c.Doctor.Rol,
+            FechaHora = c.FechaHora,
+            MotivoConsulta = c.MotivoConsulta,
+            Estado = c.Estado,
+            NotasRecepcion = c.NotasRecepcion
+        };
+
+        public CitasController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/Citas
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<CitaRespuestaDTO>>> GetCitas()
+        {
+            var citas = await _context.Citas
+                .OrderBy(c => c.FechaHora)
+                .Select(ProyeccionDto())
+                .ToListAsync();
+
+            return Ok(citas);
+        }
+
+        // GET: api/Citas/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<CitaRespuestaDTO>> GetCita(int id)
+        {
+            var cita = await _context.Citas
+                .Where(c => c.Id == id)
+                .Select(ProyeccionDto())
+                .FirstOrDefaultAsync();
+
+            if (cita == null) return NotFound("Cita no encontrada.");
+            return Ok(cita);
+        }
+
+        // POST: api/Citas
+        [HttpPost]
+        public async Task<ActionResult<Cita>> PostCita(Cita cita)
+        {
+            bool empalme = await _context.Citas.AnyAsync(c =>
+                c.DoctorId == cita.DoctorId &&
+                c.FechaHora == cita.FechaHora &&
+                c.Estado != "Cancelada");
+
+            if (empalme)
+            {
+                return Conflict("El doctor ya tiene una cita agendada en esa fecha y hora.");
+            }
+
+            if (string.IsNullOrWhiteSpace(cita.Folio))
+            {
+                cita.Folio = $"CIT-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..4].ToUpper()}";
+            }
+            else
+            {
+                cita.Folio = cita.Folio.Trim().ToUpper();
+                bool folioExiste = await _context.Citas.AnyAsync(c => c.Folio == cita.Folio);
+                if (folioExiste) return Conflict("Ya existe una cita registrada con ese folio.");
+            }
+
+            _context.Citas.Add(cita);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetCita), new { id = cita.Id }, cita);
+        }
+
+        // PUT: api/Citas/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCita(int id, Cita citaActualizada)
+        {
+            if (id != citaActualizada.Id) return BadRequest("El ID de la cita no coincide.");
+
+            if (citaActualizada.Estado != "Cancelada")
+            {
+                bool empalme = await _context.Citas.AnyAsync(c =>
+                    c.Id != id &&
+                    c.DoctorId == citaActualizada.DoctorId &&
+                    c.FechaHora == citaActualizada.FechaHora &&
+                    c.Estado != "Cancelada");
+
+                if (empalme)
+                {
+                    return Conflict("El doctor ya tiene otra cita agendada en esa fecha y hora.");
+                }
+            }
+
+            bool conservarFolioOriginal = string.IsNullOrWhiteSpace(citaActualizada.Folio);
+            if (!conservarFolioOriginal)
+            {
+                citaActualizada.Folio = citaActualizada.Folio!.Trim().ToUpper();
+                bool folioExiste = await _context.Citas.AnyAsync(c => c.Folio == citaActualizada.Folio && c.Id != id);
+                if (folioExiste) return Conflict("Ya existe otra cita registrada con ese folio.");
+            }
+
+            _context.Entry(citaActualizada).State = EntityState.Modified;
+            if (conservarFolioOriginal)
+            {
+                _context.Entry(citaActualizada).Property(c => c.Folio).IsModified = false;
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!CitaExists(id)) return NotFound();
+                else throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Citas/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCita(int id)
+        {
+            var cita = await _context.Citas.FindAsync(id);
+            if (cita == null) return NotFound();
+
+            _context.Citas.Remove(cita);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool CitaExists(int id)
+        {
+            return _context.Citas.Any(e => e.Id == id);
+        }
+    }
+}
+</file>
+
+<file path="Data/ClinicaDbContext.cs">
+using Microsoft.EntityFrameworkCore;
+using Clinica.Models;
+
+namespace Clinica.Data
+{
+    public class ClinicaDbContext : DbContext
+    {
+        public ClinicaDbContext(DbContextOptions<ClinicaDbContext> options) : base(options)
+        {
+        }
+
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Paciente> Pacientes { get; set; }
+        public DbSet<Cita> Citas { get; set; }
+        public DbSet<NotaMedica> NotasMedicas { get; set; }
+        public DbSet<Insumo> Insumos { get; set; }
+        public DbSet<ClinicaInfo> Clinicas { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Índices únicos para evitar registros duplicados en PostgreSQL
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.Correo)
+                .IsUnique();
+
+            modelBuilder.Entity<Paciente>()
+                .HasIndex(p => p.CURP)
+                .IsUnique();
+
+            modelBuilder.Entity<Cita>()
+                .HasIndex(c => c.Folio)
+                .IsUnique();
+
+            // Valores por defecto en BD para columnas nuevas en tablas existentes
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.Estado)
+                .HasDefaultValue("Activo");
+
+            modelBuilder.Entity<Insumo>()
+                .Property(i => i.Estado)
+                .HasDefaultValue("Óptimo");
+
+            modelBuilder.Entity<NotaMedica>()
+    .HasIndex(n => n.CitaId)
+    .IsUnique();
+
+
+        }
+    }
+}
+</file>
+
+<file path="DTOs/NotaMedicaRespuestaDTO.cs">
+namespace Clinica.DTOs
+{
+    public class NotaMedicaRespuestaDTO
+    {
+        public int Id { get; set; }
+        public int PacienteId { get; set; }
+        public int CitaId { get; set; }
+        public int DoctorId { get; set; }
+        public string NombrePaciente { get; set; } = null!;
+        public string NombreDoctor { get; set; } = null!;
+
+        // Sección 3: Padecimiento y Signos Vitales
+        public string MotivoConsulta { get; set; } = null!;
+        public string? FrecuenciaCardiaca { get; set; }
+        public string? FrecuenciaRespiratoria { get; set; }
+        public decimal? Temperatura { get; set; }
+        public string? SaturacionOxigeno { get; set; }
+        public decimal? Peso { get; set; }
+        public decimal? Talla { get; set; }
+        public decimal? IMC { get; set; }
+
+        // Sección 4 y 5: Exploración, Diagnóstico CIE-10 y Plan
+        public string? ExploracionFisica { get; set; }
+        public string Diagnostico { get; set; } = null!;
+        public string? CodigoCIE10 { get; set; }
+        public string PlanTerapeutico { get; set; } = null!;
+        public string? RecetaMedicamentos { get; set; }
+        public string? EstudiosAuxiliares { get; set; }
+        public DateTime FechaRegistro { get; set; }
+    }
+}
+</file>
+
+<file path="Migrations/ClinicaDbContextModelSnapshot.cs">
+// <auto-generated />
+using System;
+using Clinica.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace Clinica.Migrations
+{
+    [DbContext(typeof(ClinicaDbContext))]
+    partial class ClinicaDbContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MotivoConsulta")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("NotasRecepcion")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("Citas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Insumo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FechaCaducidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("UnidadMedida")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Insumos");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CitaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodigoCIE10")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Diagnostico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EstudiosAuxiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExploracionFisica")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FrecuenciaCardiaca")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("FrecuenciaRespiratoria")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("IMC")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("MotivoConsulta")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PacienteId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Peso")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("PlanTerapeutico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecetaMedicamentos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SaturacionOxigeno")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("Talla")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<decimal?>("Temperatura")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CitaId");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("PacienteId");
+
+                    b.ToTable("NotasMedicas");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Paciente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Alergias")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesHeredoFamiliares")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesNoPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AntecedentesPatologicos")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CURP")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContactoEmergencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FotoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Sexo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pacientes");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Usuario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BloqueadoHasta")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CedulaEspecialidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CedulaProfesional")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Correo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estudios")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaFirmaPrivacidad")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasColumnType("text");
+
+                    b.Property<int>("IntentosFallidos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("Requiere2FA")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Secreto2FA")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal?>("TarifaConsulta")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UltimoLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UniversidadEgreso")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Clinica.Models.Cita", b =>
+                {
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+
+            modelBuilder.Entity("Clinica.Models.NotaMedica", b =>
+                {
+                    b.HasOne("Clinica.Models.Cita", "Cita")
+                        .WithMany()
+                        .HasForeignKey("CitaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Usuario", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinica.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cita");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Paciente");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
+</file>
+
+<file path="appsettings.json">
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=clinica_db;Username=postgres;Password=TU_CONTRASEÑA;"
+  },
+  "Jwt": {
+    "Key": "EstaEsUnaClaveSecretaMuyLargaYSeguraParaMedicalStaff2026!",
+    "Issuer": "MedicalStaffAPI",
+    "Audience": "MedicalStaffClient"
+  }
+}
+</file>
+
+<file path="Clinica.csproj">
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+</Project>
+</file>
+
+<file path="Controllers/NotasMedicasController.cs">
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Clinica.Models;
+using Microsoft.AspNetCore.Authorization;
+using Clinica.DTOs;
+using System.Linq.Expressions;
+
+namespace Clinica.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class NotasMedicasController : ControllerBase
+    {
+        private readonly ClinicaDbContext _context;
+
+        private static Expression<Func<NotaMedica, NotaMedicaRespuestaDTO>> ProyeccionDto() => n => new NotaMedicaRespuestaDTO
+        {
+            Id = n.Id,
+            PacienteId = n.PacienteId,
+            CitaId = n.CitaId,
+            DoctorId = n.DoctorId,
+            NombrePaciente = n.Paciente!.Nombre + " " + n.Paciente.Apellidos,
+            NombreDoctor = n.Doctor!.Nombre,
+            MotivoConsulta = n.MotivoConsulta,
+            FrecuenciaCardiaca = n.FrecuenciaCardiaca,
+            FrecuenciaRespiratoria = n.FrecuenciaRespiratoria,
+            Temperatura = n.Temperatura,
+            SaturacionOxigeno = n.SaturacionOxigeno,
+            Peso = n.Peso,
+            Talla = n.Talla,
+            IMC = n.IMC,
+            ExploracionFisica = n.ExploracionFisica,
+            Diagnostico = n.Diagnostico,
+            CodigoCIE10 = n.CodigoCIE10,
+            PlanTerapeutico = n.PlanTerapeutico,
+            RecetaMedicamentos = n.RecetaMedicamentos,
+            EstudiosAuxiliares = n.EstudiosAuxiliares,
+            FechaRegistro = n.FechaRegistro
+        };
+
+        public NotasMedicasController(ClinicaDbContext context)
+        {
+            _context = context;
+        }
+
+        // GET: api/NotasMedicas
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<NotaMedicaRespuestaDTO>>> GetNotasMedicas()
+        {
+            var notas = await _context.NotasMedicas
+                .OrderByDescending(n => n.FechaRegistro)
+                .Select(ProyeccionDto())
+                .ToListAsync();
+
+            return Ok(notas);
+        }
+
+        // GET: api/NotasMedicas/historial/5
+        [HttpGet("historial/{pacienteId}")]
+        public async Task<ActionResult<IEnumerable<NotaMedicaRespuestaDTO>>> GetHistorialPorPaciente(int pacienteId)
+        {
+            var notas = await _context.NotasMedicas
+                .Where(n => n.PacienteId == pacienteId)
+                .OrderByDescending(n => n.FechaRegistro)
+                .Select(ProyeccionDto())
+                .ToListAsync();
+
+            return Ok(notas);
+        }
+
+        // GET: api/NotasMedicas/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<NotaMedicaRespuestaDTO>> GetNotaMedica(int id)
+        {
+            var nota = await _context.NotasMedicas
+                .Where(n => n.Id == id)
+                .Select(ProyeccionDto())
+                .FirstOrDefaultAsync();
+
+            if (nota == null) return NotFound("Nota médica no encontrada.");
+            return Ok(nota);
+        }
+
+        // POST: api/NotasMedicas
+        [HttpPost]
+        public async Task<ActionResult<NotaMedica>> PostNotaMedica(NotaMedica notaMedica)
+        {
+            bool notaExiste = await _context.NotasMedicas
+                .AnyAsync(n => n.CitaId == notaMedica.CitaId);
+
+            if (notaExiste)
+            {
+                return Conflict("Esta cita ya tiene una nota médica registrada.");
+            }
+
+            _context.NotasMedicas.Add(notaMedica);
+
+            var cita = await _context.Citas.FindAsync(notaMedica.CitaId);
+            if (cita != null)
+            {
+                cita.Estado = "Completada";
+            }
+
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetNotaMedica), new { id = notaMedica.Id }, notaMedica);
+        }
+
+        // PUT: api/NotasMedicas/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutNotaMedica(int id, NotaMedica notaMedicaActualizada)
+        {
+            if (id != notaMedicaActualizada.Id) return BadRequest("El ID no coincide.");
+
+            bool citaYaTieneNota = await _context.NotasMedicas
+    .AnyAsync(n => n.CitaId == notaMedicaActualizada.CitaId && n.Id != id);
+
+            if (citaYaTieneNota)
+            {
+                return Conflict("Esa cita ya tiene otra nota médica registrada.");
+            }
+
+            _context.Entry(notaMedicaActualizada).State = EntityState.Modified;
+            _context.Entry(notaMedicaActualizada).Property(n => n.FechaRegistro).IsModified = false;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!NotaMedicaExists(id)) return NotFound();
+                else throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/NotasMedicas/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNotaMedica(int id)
+        {
+            var nota = await _context.NotasMedicas.FindAsync(id);
+            if (nota == null) return NotFound();
+
+            _context.NotasMedicas.Remove(nota);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool NotaMedicaExists(int id)
+        {
+            return _context.NotasMedicas.Any(e => e.Id == id);
+        }
+    }
+}
+</file>
+
+<file path="Program.cs">
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Clinica.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text;
+using System.Text.Json.Serialization; // NUEVO: Para evitar bucles de JSON
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 1. Configuración de PostgreSQL
+builder.Services.AddDbContext<ClinicaDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// NUEVO: 2. Configurar CORS (Permitir que Angular se conecte sin bloqueos)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirAngular", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200") // El puerto oficial de Angular
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// 3. Configuración de JWT (Se mantiene igual)
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    });
+
+// NUEVO: 4. Agregar controladores y evitar ciclos de referencias cruzadas
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    // Configuración del candado de Swagger (Se mantiene igual)
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Autenticación JWT. Escribe 'Bearer' [espacio] y tu token.",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            new string[] {}
+        }
+    });
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+// NUEVO: 5. Activar CORS antes de la autenticación
+app.UseCors("PermitirAngular");
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+
+public class UtcDateTimeConverter : JsonConverter<DateTime>
+{
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var dt = reader.GetDateTime();
+        return dt.Kind switch
+        {
+            DateTimeKind.Utc => dt,
+            DateTimeKind.Local => dt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+    {
+        var utc = value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+        writer.WriteStringValue(utc);
+    }
+}
+</file>
+
+</files>

@@ -8,7 +8,7 @@ namespace Clinica.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // 🔒 Todo este controlador requiere Token JWT para poder usarse
+    [Authorize]
     public class PacientesController : ControllerBase
     {
         private readonly ClinicaDbContext _context;
@@ -18,14 +18,14 @@ namespace Clinica.Controllers
             _context = context;
         }
 
-        // 1. GET: api/Pacientes (Obtener todos los pacientes)
+        // GET: api/Pacientes
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Paciente>>> GetPacientes()
         {
             return await _context.Pacientes.ToListAsync();
         }
 
-        // 2. GET: api/Pacientes/5 (Buscar un paciente específico por su ID)
+        // GET: api/Pacientes/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Paciente>> GetPaciente(int id)
         {
@@ -34,22 +34,44 @@ namespace Clinica.Controllers
             return paciente;
         }
 
-        // 3. POST: api/Pacientes (Registrar paciente nuevo)
+        // POST: api/Pacientes
         [HttpPost]
         public async Task<ActionResult<Paciente>> PostPaciente(Paciente paciente)
         {
+            var curpNormalizada = paciente.CURP.Trim().ToUpper();
+            bool curpExiste = await _context.Pacientes
+                .AnyAsync(p => p.CURP.ToUpper() == curpNormalizada);
+
+            if (curpExiste)
+            {
+                return Conflict("Ya existe un paciente registrado con esa CURP.");
+            }
+
+            paciente.CURP = curpNormalizada;
             _context.Pacientes.Add(paciente);
             await _context.SaveChangesAsync();
-            return CreatedAtAction("GetPaciente", new { id = paciente.Id }, paciente);
+
+            return CreatedAtAction(nameof(GetPaciente), new { id = paciente.Id }, paciente);
         }
 
-        // 4. PUT: api/Pacientes/5 (Actualizar datos del paciente)
+        // PUT: api/Pacientes/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPaciente(int id, Paciente pacienteActualizado)
         {
             if (id != pacienteActualizado.Id) return BadRequest("El ID no coincide.");
 
+            var curpNormalizada = pacienteActualizado.CURP.Trim().ToUpper();
+            bool curpExiste = await _context.Pacientes
+                .AnyAsync(p => p.CURP.ToUpper() == curpNormalizada && p.Id != id);
+
+            if (curpExiste)
+            {
+                return Conflict("Ya existe otro paciente registrado con esa CURP.");
+            }
+
+            pacienteActualizado.CURP = curpNormalizada;
             _context.Entry(pacienteActualizado).State = EntityState.Modified;
+            _context.Entry(pacienteActualizado).Property(p => p.FechaRegistro).IsModified = false;
 
             try
             {
@@ -64,7 +86,7 @@ namespace Clinica.Controllers
             return NoContent();
         }
 
-        // 5. DELETE: api/Pacientes/5 (Eliminar un paciente)
+        // DELETE: api/Pacientes/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePaciente(int id)
         {
